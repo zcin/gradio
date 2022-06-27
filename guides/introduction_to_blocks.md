@@ -101,6 +101,14 @@ This is perhaps most easily illustrated with an example:
 
 {{ demos["blocks_essay"] }}
 
+You can also use the `gradio.update` function as a short-hand for using the component class's update method. 
+
+You can see an example of `gradio.update` in the following demo:
+
+{{ code["blocks_essay"] }}
+
+{{ demos["blocks_essay"] }}
+
 ### Sharing Blocks Publicly
 
 Blocks  can be easily shared publicly by setting `share=True` in the `launch()` method. Like this:
