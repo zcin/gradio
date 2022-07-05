@@ -714,9 +714,6 @@ class Interface(Blocks):
         for predict_fn in self.predict:
             prediction = predict_fn(*processed_input)
 
-            # if len(self.output_components) == len(self.predict) or prediction is None:
-            #     prediction = [prediction]
-
             # if self.api_mode:  # Serialize the input
             #     prediction_ = copy.deepcopy(prediction)
             #     prediction = []
@@ -735,9 +732,10 @@ class Interface(Blocks):
         all_refs = ray.get(predictions)
         all_predictions = []
         for result in all_refs:
-            if not isinstance(result, list) and not isinstance(result, tuple):
-                result = [result]
-            all_predictions.extend(result)
+            if isinstance(result, tuple):
+                all_predictions.extend(result)
+            else:
+                all_predictions.append(result)
         return all_predictions
 
     def process(self, raw_input: List[Any]) -> Tuple[List[Any], List[float]]:
