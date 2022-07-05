@@ -714,29 +714,29 @@ class Interface(Blocks):
         for predict_fn in self.predict:
             prediction = predict_fn(*processed_input)
 
-            # if self.api_mode:  # Serialize the input
-            #     prediction_ = copy.deepcopy(prediction)
-            #     prediction = []
+            if self.api_mode:  # Serialize the input
+                prediction_ = copy.deepcopy(prediction)
+                prediction = []
 
-            #     # Done this way to handle both single interfaces with multiple outputs and Parallel() interfaces
-            #     for pred in prediction_:
-            #         prediction.append(
-            #             self.output_components[output_component_counter].deserialize(
-            #                 pred
-            #             )
-            #         )
-            #         output_component_counter += 1
+                # Done this way to handle both single interfaces with multiple outputs and Parallel() interfaces
+                for pred in prediction_:
+                    prediction.append(
+                        self.output_components[output_component_counter].deserialize(
+                            pred
+                        )
+                    )
+                    output_component_counter += 1
 
             predictions.append(prediction)
 
-        all_refs = ray.get(predictions)
-        all_predictions = []
-        for result in all_refs:
-            if isinstance(result, tuple):
-                all_predictions.extend(result)
+        predictions = ray.get(predictions)
+        results = []
+        for pred in predictions:
+            if isinstance(pred, tuple):
+                results.extend(pred)
             else:
-                all_predictions.append(result)
-        return all_predictions
+                results.append(pred)
+        return results
 
     def process(self, raw_input: List[Any]) -> Tuple[List[Any], List[float]]:
         """
