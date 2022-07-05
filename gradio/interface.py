@@ -730,12 +730,9 @@ class Interface(Blocks):
             #         )
             #         output_component_counter += 1
 
-            # predictions.extend(prediction)
             predictions.append(prediction)
 
-        # return predictions
         all_refs = ray.get(predictions)
-        
         all_predictions = []
         for result in all_refs:
             if not isinstance(result, list) and not isinstance(result, tuple):
