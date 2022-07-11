@@ -41,6 +41,7 @@ from gradio.process_examples import cache_interface_examples, load_from_cache
 
 import ray
 from ray import serve
+import asyncio
 
 if TYPE_CHECKING:  # Only import for type checking (is False at runtime).
     import transformers
@@ -507,11 +508,13 @@ class Interface(Blocks):
                                 flag_btns = render_flag_btns(self.flagging_options)
                             if self.interpretation:
                                 interpretation_btn = Button("Interpret")
-            submit_fn = (
-                lambda *args: self.run_prediction(args)[0]
-                if len(self.output_components) == 1
-                else self.run_prediction(args)
-            )
+
+            async def submit_fn(*args):
+                if len(self.output_components) == 1:
+                    return (await self.run_prediction(args))[0]
+                else:
+                    return await self.run_prediction(args)
+
             if self.live:
                 if self.interface_type == self.InterfaceTypes.OUTPUT_ONLY:
                     super().load(submit_fn, None, self.output_components)
@@ -689,7 +692,7 @@ class Interface(Blocks):
             repr += "\n|-{}".format(str(component))
         return repr
 
-    def run_prediction(
+    async def run_prediction(
         self,
         processed_input: List[Any],
         called_directly: bool = False,
@@ -713,25 +716,18 @@ class Interface(Blocks):
 
         for predict_fn in self.predict:
             prediction = predict_fn(*processed_input)
+            if isinstance(prediction, list) or isinstance(prediction, tuple):
+                predictions.extend(prediction)
+            else:
+                predictions.append(prediction)
+            
 
-            if self.api_mode:  # Serialize the input
-                prediction_ = copy.deepcopy(prediction)
-                prediction = []
+        async_predictions = [pred for pred in predictions if isinstance(pred, asyncio.Future)]
+        sync_predictions = [pred for pred in predictions if not isinstance(pred, asyncio.Future)]
 
-                # Done this way to handle both single interfaces with multiple outputs and Parallel() interfaces
-                for pred in prediction_:
-                    prediction.append(
-                        self.output_components[output_component_counter].deserialize(
-                            pred
-                        )
-                    )
-                    output_component_counter += 1
-
-            predictions.append(prediction)
-
-        predictions = ray.get(predictions)
-        results = []
-        for pred in predictions:
+        async_predictions = await asyncio.gather(*async_predictions)
+        results = sync_predictions
+        for pred in async_predictions:
             if isinstance(pred, tuple):
                 results.extend(pred)
             else:

@@ -19,9 +19,6 @@ from gradio.context import Context
 from gradio.deprecation import check_deprecated_parameters
 from gradio.utils import component_or_layout_class, delete_none
 
-import ray
-from ray import serve
-
 if TYPE_CHECKING:  # Only import for type checking (is False at runtime).
     from fastapi.applications import FastAPI
 
@@ -459,8 +456,10 @@ class Blocks(BlockContext):
 
         start = time.time()
         if inspect.iscoroutinefunction(block_fn.fn):
+            print("blocks: async def call_function | is coroutine function")
             prediction = await block_fn.fn(*processed_input)
         else:
+            print("blocks: async def call_function | is not coroutine function")
             prediction = await anyio.to_thread.run_sync(
                 block_fn.fn, *processed_input, limiter=self.limiter
             )
@@ -731,22 +730,6 @@ class Blocks(BlockContext):
         local_url (str): Locally accessible link to the demo
         share_url (str): Publicly accessible link to the demo (if share=True, otherwise None)
         """
-        # Reroute to send request to model served on Ray Serve
-        ray.init(num_cpus=10)
-        serve_client = serve.start(detached=True)
-
-        new_predict = []
-        for predict_fn in self.predict:
-            model = serve.deployment(name=predict_fn.__name__, num_replicas=2)(predict_fn)
-            model.deploy()
-
-            def f(*args, predict_fn=predict_fn):
-                print("getting response from handle")
-                handle = serve_client.get_handle(predict_fn.__name__)
-                return handle.remote(*args)
-            new_predict.append(f)
-        self.predict = new_predict
-
         self.dev_mode = False
         if (
             auth
