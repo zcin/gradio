@@ -1,3 +1,4 @@
+from re import T
 import gradio as gr
 import ray
 from ray import serve
@@ -9,12 +10,14 @@ def start_ray_backend():
     ray.init(num_cpus=10)
     return serve.start(detached=True)
 
-def rayify_interface(serve_client, io: gr.Interface, name=None):
+def rayify_interface(serve_client, io: gr.Interface, names=None):
     # note: the rayify process makes serve deployments, before gradio launches
-    if name is None:
-        name = predict_fn.__name__
+    if names is None:
+        names = [fn.__name__ for fn in io.predict]
+    assert len(io.predict) == len(names)
+    
     wrapped_fns = []
-    for predict_fn in io.predict:
+    for (predict_fn, name) in zip(io.predict, names):
         model = serve.deployment(name=name, num_replicas=2)(predict_fn)
         model.deploy()
         handle = serve_client.get_handle(name)
