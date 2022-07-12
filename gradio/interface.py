@@ -39,8 +39,6 @@ from gradio.flagging import CSVLogger, FlaggingCallback  # type: ignore
 from gradio.layouts import Column, Row, TabItem, Tabs
 from gradio.process_examples import cache_interface_examples, load_from_cache
 
-import ray
-from ray import serve
 import asyncio
 
 if TYPE_CHECKING:  # Only import for type checking (is False at runtime).
