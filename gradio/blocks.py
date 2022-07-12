@@ -456,10 +456,8 @@ class Blocks(BlockContext):
 
         start = time.time()
         if inspect.iscoroutinefunction(block_fn.fn):
-            print("blocks: async def call_function | is coroutine function")
             prediction = await block_fn.fn(*processed_input)
         else:
-            print("blocks: async def call_function | is not coroutine function")
             prediction = await anyio.to_thread.run_sync(
                 block_fn.fn, *processed_input, limiter=self.limiter
             )
